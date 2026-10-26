@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Industrial Maintenance AI">
+  <rect width="64" height="64" rx="14" fill="#0a1c2e"/>
+  <path d="M14 46V27l9 6V23l9 6V18h9v28H14Z" fill="#14b8a6"/>
+  <path d="M18 46v-7h6v7h-6Zm11 0v-9h6v9h-6Zm11 0V30h6v16h-6Z" fill="#0a1c2e"/>
+  <circle cx="46" cy="49" r="4" fill="#5eead4"/>
+</svg>

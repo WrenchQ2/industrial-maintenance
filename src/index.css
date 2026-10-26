@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+
+  --color-navy-50: #f1f5f9;
+  --color-navy-100: #e2e9f1;
+  --color-navy-200: #c5d3e2;
+  --color-navy-300: #9db3ca;
+  --color-navy-400: #6d8cab;
+  --color-navy-500: #4b6d8f;
+  --color-navy-600: #385675;
+  --color-navy-700: #2b435d;
+  --color-navy-800: #183a5a;
+  --color-navy-900: #112c46;
+  --color-navy-950: #0a1c2e;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800;
+  }
+
+  ::selection {
+    @apply bg-teal-200 text-navy-950;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Barras de desplazamiento discretas para tablas y menús. */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: #cbd5e1;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
