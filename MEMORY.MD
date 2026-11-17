@@ -6,6 +6,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Glassmorphism reforzado en el Inicio: halos ambientales, paneles translúcidos con `backdrop-filter`, brillo diagonal, bordes luminosos y fallback opaco.
 - Resto de vistas y shell (sidebar/topbar) sin cambios. `index.html` intacto.
 - `contenidored/` sincronizado con la raíz: los tres archivos tienen el mismo SHA-256 y la copia se validó abriéndola con `file://`.
+- Publicado en GitHub: rama `servmotion-tecnico` de `WrenchQ2/industrial-maintenance` (commit `e3f986f`); `main` conserva la app React anterior.
 ## Decisiones (y por qué)
 - Sin backend ni dependencias: cualquiera debe poder abrirlo con doble clic para modificación de vista de las pantallas del tecnico.
 - Demo funcional para realizar cambios e implementarlo realmente despues de finalizar con la modificación de dicha pantalla.
