@@ -12,7 +12,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - `EQ-003` muestra **Iniciar reparación** (tabla, dashboard, hero y expediente) y abre `#/reparacion/EQ-003` con el diagnóstico en solo lectura; no hay campos editables.
 - Formulario de diagnóstico editable con pestañas A-D: un bloque visible, navegación Anterior/Siguiente, chips de avance clicables y salto al bloque del primer error. La vista previa y el diagnóstico finalizado siguen apilados.
 - `contenidored/` sincronizado con hashes idénticos; `AGENTS.md` y esta memoria actualizados.
-- Rama `servmotion-tecnico`; commit `18bb3cb` publicado y cambios de pestañas pendientes de commit.
+- Rama `servmotion-tecnico`; commits `ba94725` (pestañas) y `18baac2` (constitución) publicados.
 - Constitución en `docs/constitution.md`: 6 principios innegociables (stack, spec, lógica/interfaz, tests, datos e idioma).
 - La ventana del técnico es la fase 1; el producto comercial se especifica antes de implementarse.
 ## Decisiones (y por qué)
