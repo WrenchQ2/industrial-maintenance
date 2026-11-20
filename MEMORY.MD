@@ -2,24 +2,33 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 ## Estado actual
 - Prototipo frontend estático funcionando con `file://`, sin backend ni dependencias.
-- Inicio rediseñado (v2): hero azul marino, anillo de cierre, KPIs con gráficas circulares (donas), tarjetas de equipo con más jerarquía, panel "Continuar trabajo", actividad y accesos rápidos.
-- Glassmorphism reforzado en el Inicio: halos ambientales, paneles translúcidos con `backdrop-filter`, brillo diagonal, bordes luminosos y fallback opaco.
-- Resto de vistas y shell (sidebar/topbar) sin cambios. `index.html` intacto.
-- `contenidored/` sincronizado con la raíz: los tres archivos tienen el mismo SHA-256 y la copia se validó abriéndola con `file://`.
-- Publicado en GitHub: rama `servmotion-tecnico` de `WrenchQ2/industrial-maintenance` (commit `e3f986f`); `main` conserva la app React anterior.
+- Inicio v2 con glassmorphism, KPIs y gráficas circulares; shell y resto de vistas coherentes.
+- **Equipos** sustituye a “Mis equipos”: cola activa del técnico (Asignado, En diagnóstico, Por reparar), columna **Vendedor**, búsqueda por vendedor y filtro por estado.
+- Nuevo estado `repair` (“Por reparar”, tono violeta). `diagnosed` sigue siendo “Diagnosticado” y queda fuera de la cola.
+- Demo ampliada a 3 equipos: `EQ-001` asignado, `EQ-002` finalizado y `EQ-003` por reparar (FANUC, autorizado y con materiales completos).
+- Vendedores ficticios: Mariana Cortés (`EQ-001`, `EQ-003`) y Diego Fuentes (`EQ-002`).
+- Diagnósticos seed: `DIA-0001` (EQ-002) y `DIA-0002` (EQ-003, finalizado y bloqueado).
+- Inicio muestra el panel “Equipos”, el botón “Ver pendientes”, la nota “Pendiente de reparación” y el bloque “Equipo por reparar” en Siguiente paso.
+- `EQ-003` muestra **Iniciar reparación** (tabla, dashboard, hero y expediente) y abre `#/reparacion/EQ-003` con el diagnóstico en solo lectura; no hay campos editables.
+- `contenidored/` sincronizado con hashes idénticos; `AGENTS.md` y esta memoria actualizados.
+- Rama `servmotion-tecnico`; cambios de esta iteración pendientes de commit.
 ## Decisiones (y por qué)
-- Sin backend ni dependencias: cualquiera debe poder abrirlo con doble clic para modificación de vista de las pantallas del tecnico.
-- Demo funcional para realizar cambios e implementarlo realmente despues de finalizar con la modificación de dicha pantalla.
-- Estilos del nuevo Inicio aislados bajo `.dashboard-view` para no afectar otras vistas.
-- Gráficas circulares con `conic-gradient` y el helper `conicChart`; usan datos reales (estados, cierres y semanas) y evitan librerías. El avance del borrador también es un medidor circular.
-- El vidrio se apoya en un fondo con halos cian/azul: sin color detrás, `backdrop-filter` apenas se percibe.
-- El CTA del hero conserva el flujo: inicia/continúa diagnóstico vía `data-action="start-diagnostic"`.
+- `repair` es un estado propio porque el flujo real es: vendedor autoriza → compras registra materiales → asignación al técnico → el técnico repara.
+- `WORK_QUEUE_STATUSES = ['assigned', 'diagnosing', 'repair']`: la cola no mezcla equipos ya diagnosticados ni cerrados.
+- El alcance de esta fase es solo la cola del técnico; no existen vistas de vendedor, compras ni materiales.
+- La reparación usa una ruta propia (`#/reparacion/:id`) y `renderReadonlySections`; así se reutiliza la vista protegida sin abrir el formulario editable.
+- Para equipos `repair` se omite “Ver diagnóstico” porque el diagnóstico se consulta dentro de la propia reparación.
+- `ensureDemoState()` migra `localStorage` antiguo (vendedores, `EQ-003` y su diagnóstico) sin borrar diagnósticos, borradores, historial, documentos ni notas; usa `nextSequentialId` si `DIA-0002` está ocupado.
+- Los textos del dashboard pueden seguir mostrando Diagnosticado/Finalizado: son resumen global, no la cola.
 ## Aprendizajes y errores a evitar
-- No renombrar `data-action`, `data-field`, `data-sync` ni IDs: los manejadores dependen de ellos.
-- Verificar overflow horizontal a 1440/1024/900/768/390 px; hay scrollbars que recortan 15 px el ancho útil.
-- Probar preferencias extremas (texto grande + densidad compacta) en móvil.
-- Al usar `backdrop-filter`, incluir prefijo `-webkit-` y un fallback con `@supports` para navegadores sin soporte.
-- En donas con `conic-gradient`, omitir segmentos en cero y añadir `role="img"` con `aria-label` descriptivo; el centro va `aria-hidden`.
+- No renombrar `data-action`, `data-field`, `data-sync`, `data-route` ni IDs: los manejadores dependen de ellos.
+- Al añadir un estado, revisar `EQUIPMENT_STATUS`, `actionsForEquipment`, `notificationItems`, dashboard e historial.
+- Probar overflow horizontal en 1440/1024/900/768/390 px; la tabla de Equipos usa `min-width: 920px` y scroll interno.
+- `filterEquipmentTable()` debe usar `queueEquipment()`, no `ownEquipment()`, para no reintroducir equipos cerrados.
+- La ruta `#/reparacion/:id` debe exigir técnico propietario y `status === 'repair'`; verifica que dentro de `#app` haya 0 `input`, `select`, `textarea`, `form` y `data-field`.
+- Al modificar la raíz, sincronizar `contenidored/` y comparar hashes; la copia debe seguir siendo espejo.
 ## Próximos pasos
-- Recoger feedback visual del usuario sobre el nuevo Inicio.
-- Mantener `contenidored/` sincronizado tras cualquier cambio futuro en la raíz.
+- Recoger feedback visual de la cola de Equipos y de la vista de reparación.
+- Fase futura: pantallas de vendedor/compras, autorización, materiales y transición a `repair`.
+- Futuro: registro/cierre de la reparación y transición a un estado reparado.
+- Mantener `contenidored/` y `AGENTS.md` sincronizados tras cambios futuros.

@@ -38,8 +38,12 @@
     assigned: { key: 'assigned', label: 'Asignado', tone: 'blue', icon: 'clock' },
     diagnosing: { key: 'diagnosing', label: 'En diagnóstico', tone: 'amber', icon: 'edit' },
     diagnosed: { key: 'diagnosed', label: 'Diagnosticado', tone: 'cyan', icon: 'check-circle' },
+    repair: { key: 'repair', label: 'Por reparar', tone: 'violet', icon: 'settings' },
     finished: { key: 'finished', label: 'Finalizado', tone: 'green', icon: 'check-circle' }
   });
+
+  /* Estados que forman la cola activa del técnico: diagnóstico y reparación. */
+  const WORK_QUEUE_STATUSES = Object.freeze(['assigned', 'diagnosing', 'repair']);
 
   /* Estados posibles de un registro de diagnóstico: borrador o finalizado. */
   const DIAG_STATUS = Object.freeze({
@@ -68,7 +72,7 @@
   /* Metadatos de las rutas principales: título de página y módulo activo del sidebar. */
   const ROUTE_META = Object.freeze({
     inicio: { title: 'Inicio', nav: 'inicio' },
-    equipos: { title: 'Mis equipos', nav: 'equipos' },
+    equipos: { title: 'Equipos', nav: 'equipos' },
     expediente: { title: 'Expediente digital', nav: 'equipos' },
     diagnosticos: { title: 'Diagnósticos', nav: 'diagnosticos' },
     historial: { title: 'Historial', nav: 'historial' },
@@ -317,7 +321,7 @@
 
   /* ------------------------------------------------------------
      4. Ilustraciones internas y datos de demostración
-     Generación de imágenes SVG embebidas y buildSeed(), que crea el estado ficticio inicial con técnico, clientes, dos equipos, diagnósticos, historial y documentos.
+     Generación de imágenes SVG embebidas y buildSeed(), que crea el estado ficticio inicial con técnico, clientes, tres equipos, diagnósticos, historial y documentos.
      ------------------------------------------------------------ */
   /* Genera una ilustración SVG (data URL) del servomotor para las fotografías de recepción de la
      demo.
@@ -409,6 +413,93 @@
     return svgDataUrl(svg);
   }
 
+  /* Vendedores ficticios asociados a los equipos de la demostración. */
+  const DEMO_SELLERS = Object.freeze({
+    'EQ-001': 'Mariana Cortés',
+    'EQ-002': 'Diego Fuentes',
+    'EQ-003': 'Mariana Cortés'
+  });
+
+  /* Equipo de demostración ya autorizado por el vendedor y con materiales completos, por lo que la
+     cola del técnico lo muestra como "Por reparar".
+     */
+  function seedRepairEquipment() {
+    return {
+      id: 'EQ-003',
+      order: 'SM-2026-0151',
+      clientId: 'CLI-002',
+      seller: DEMO_SELLERS['EQ-003'],
+      manufacturer: 'FANUC',
+      model: 'A06B-0075-B403',
+      serial: 'FAN-A06-5514',
+      receptionDate: daysAgo(16, 10, 10),
+      priority: 'medium',
+      status: 'repair',
+      technicianId: CONFIG.techId,
+      assignmentDate: daysAgo(15, 9, 30),
+      receivedBy: 'Mtro. Jorge Salinas',
+      receptionNotes: 'Equipo autorizado por el vendedor y con materiales completos. Se asigna al técnico para iniciar la reparación.',
+      accessories: ['Cable de potencia 3 m', 'Conector de encoder', 'Placa de montaje'],
+      reportedFailure: 'Pérdida de posición y ruido mecánico. El cliente autorizó la reparación del encoder y la validación en banco.',
+      photos: [
+        equipmentPhoto('FANUC', 'A06B-0075-B403', 'blue'),
+        equipmentPhoto('FANUC', 'Vista de conector', 'cyan')
+      ]
+    };
+  }
+
+  /* Diagnóstico ficticio ya finalizado de EQ-003. Se muestra como referencia bloqueada al iniciar
+     la reparación; el técnico puede consultarlo, pero no editarlo.
+     */
+  function seedRepairDiagnostic(id = 'DIA-0002') {
+    return {
+      id,
+      equipmentId: 'EQ-003',
+      order: 'SM-2026-0151',
+      technicianAssignedId: CONFIG.techId,
+      capturedById: CONFIG.techId,
+      status: 'finished',
+      createdAt: daysAgo(13, 10, 0),
+      updatedAt: daysAgo(12, 17, 30),
+      finalizedAt: daysAgo(12, 17, 30),
+      assessment: {
+        visualCondition: 'Conector de encoder con desgaste',
+        safetyCheck: 'Verificado',
+        initialObservations: 'Se recibió el equipo con el conector de retroalimentación flojo y presencia de polvo. Se revisó la placa de características y se confirmó que no hay daños estructurales.'
+      },
+      encoder: {
+        type: 'absoluto',
+        impedanceSine: '121.4',
+        impedanceCosine: '120.8',
+        impedanceReference: '60.2'
+      },
+      pinout: {
+        image: pinoutDemoImage(),
+        fileName: 'pinout-fanuc-a06b.svg',
+        manufacturer: 'FANUC',
+        manual: 'Manual de mantenimiento A06B Serie αi',
+        page: '112',
+        connectorRef: 'JF1 / CON-B'
+      },
+      poles: 8,
+      syncStored: 'no',
+      syncValues: {
+        'U-V': ['0.81', '0.82', '0.80', '0.83', '0.82', '0.81', '0.84', '0.82'],
+        'U-W': ['0.83', '0.82', '0.84', '0.81', '0.83', '0.82', '0.81', '0.83'],
+        'V-W': ['0.82', '0.84', '0.81', '0.83', '0.82', '0.84', '0.83', '0.81'],
+        'V-U': ['0.80', '0.81', '0.83', '0.82', '0.81', '0.83', '0.82', '0.84'],
+        'W-V': ['0.83', '0.82', '0.81', '0.84', '0.83', '0.81', '0.82', '0.83'],
+        'W-U': ['0.81', '0.83', '0.82', '0.80', '0.84', '0.82', '0.83', '0.82']
+      },
+      conclusion: {
+        rootCause: 'Desgaste del conector de retroalimentación y variación de la señal del encoder absoluto, compatible con la pérdida de posición reportada.',
+        actionsPerformed: 'Se inspeccionó el arnés, se midieron impedancias y se validó la tabla de sincronía con ocho polos en banco. Se confirmó la necesidad de sustituir el conector y recalibrar el encoder.',
+        finalResult: 'Requiere intervención',
+        notes: 'Diagnóstico de referencia para la reparación. Sustituir el conector, revisar el arnés y validar la posición absoluta al energizar. Registro bloqueado: el técnico no puede modificarlo.'
+      }
+    };
+  }
+
   /* Construye el estado inicial completo de la demostración: técnico, clientes, equipos,
      diagnósticos, historial, documentos y preferencias.
      */
@@ -445,6 +536,7 @@
         id: 'EQ-001',
         order: 'SM-2026-0142',
         clientId: 'CLI-001',
+        seller: DEMO_SELLERS['EQ-001'],
         manufacturer: 'Siemens',
         model: '1FK7063-2AF71-1RG1',
         serial: 'SIE-1FK-8842',
@@ -466,6 +558,7 @@
         id: 'EQ-002',
         order: 'SM-2026-0137',
         clientId: 'CLI-002',
+        seller: DEMO_SELLERS['EQ-002'],
         manufacturer: 'Allen-Bradley',
         model: 'MPL-B430P-MK72AA',
         serial: 'AB-MPL-2291',
@@ -483,7 +576,8 @@
           equipmentPhoto('ALLEN-BRADLEY', 'MPL-B430P-MK72AA', 'cyan'),
           equipmentPhoto('ALLEN-BRADLEY', 'Vista de placa', 'blue')
         ]
-      }
+      },
+      seedRepairEquipment()
     ];
 
     const diagnostics = [
@@ -532,7 +626,8 @@
           finalResult: 'Requiere intervención',
           notes: 'Se recomienda sustituir el arnés de retroalimentación y repetir la medición de sincronía después del cambio. El equipo queda diagnosticado para continuar con el proceso administrativo correspondiente.'
         }
-      }
+      },
+      seedRepairDiagnostic()
     ];
 
     const history = [
@@ -735,6 +830,35 @@
     }
   }
 
+  /* Completa estados guardados con versiones anteriores: añade el vendedor y el equipo EQ-003
+     sin borrar diagnósticos ni borradores existentes.
+     */
+  function ensureDemoState(data) {
+    let changed = false;
+    data.equipment.forEach((item) => {
+      if (!item.seller) {
+        item.seller = DEMO_SELLERS[item.id] || 'Sin vendedor';
+        changed = true;
+      }
+    });
+    if (!data.equipment.some((item) => item.id === 'EQ-003')) {
+      data.equipment.push(seedRepairEquipment());
+      changed = true;
+    }
+    if (!data.diagnostics.some((item) => item.equipmentId === 'EQ-003')) {
+      data.diagnostics.push(seedRepairDiagnostic(nextSequentialId('DIA', data.diagnostics)));
+      changed = true;
+    }
+    if (changed) {
+      try {
+        localStorage.setItem(CONFIG.storageKey, JSON.stringify(data));
+      } catch (error) {
+        console.warn('No se pudo guardar la actualización de la demo; se aplicará solo en esta sesión.', error);
+      }
+    }
+    return data;
+  }
+
   /* Lee y valida localStorage; si no existe, está corrupto o es incompatible, respalda lo posible
      y devuelve el seed, registrando avisos de arranque.
      */
@@ -778,7 +902,7 @@
         }
         return seed;
       }
-      return parsed;
+      return ensureDemoState(parsed);
     } catch (error) {
       storageReady = false;
       lastStorageError = error;
@@ -837,6 +961,8 @@
   /* Consultas básicas del dominio: técnico actual y búsquedas por id. */
   const tech = () => state.tech;
   const ownEquipment = () => state.equipment.filter((item) => item.technicianId === state.tech.id);
+  /* Cola activa del técnico: asignados, en diagnóstico y por reparar. */
+  const queueEquipment = () => ownEquipment().filter((item) => WORK_QUEUE_STATUSES.includes(item.status));
   const getEquipment = (id) => state.equipment.find((item) => item.id === id) || null;
   const getClient = (id) => state.clients.find((item) => item.id === id) || null;
   const getDiagnostic = (id) => state.diagnostics.find((item) => item.id === id) || null;
@@ -907,7 +1033,7 @@
     return {
       canStart: equipment.status === 'assigned' && !draft,
       canContinue: Boolean(draft),
-      canView: Boolean(finalized) || equipment.status === 'diagnosed' || equipment.status === 'finished',
+      canView: Boolean(finalized) || equipment.status === 'diagnosed' || equipment.status === 'repair' || equipment.status === 'finished',
       draft,
       finalized
     };
@@ -949,7 +1075,19 @@
           date: finalized?.finalizedAt || finalized?.updatedAt || equipment.assignmentDate,
           icon: 'check-circle',
           title: `Diagnóstico finalizado · ${equipment.order}`,
-          subtitle: `${equipment.manufacturer} ${equipment.model} · listo para consulta`,
+          subtitle: `${equipment.manufacturer} ${equipment.model} · pendiente de autorización`,
+          route: finalized ? `#/diagnosticos/${finalized.id}` : `#/expediente/${equipment.id}`
+        });
+        return;
+      }
+      if (equipment.status === 'repair') {
+        const finalized = latestFinalizedDiagnostic(equipment.id);
+        items.push({
+          id: `repair-${equipment.id}`,
+          date: equipment.assignmentDate || equipment.receptionDate,
+          icon: 'settings',
+          title: `Equipo por reparar · ${equipment.order}`,
+          subtitle: `${equipment.manufacturer} ${equipment.model} · pendiente de reparación`,
           route: finalized ? `#/diagnosticos/${finalized.id}` : `#/expediente/${equipment.id}`
         });
       }
@@ -1349,6 +1487,17 @@
       };
     }
 
+    if (name === 'reparacion') {
+      const equipment = getEquipment(parts[1]);
+      if (!equipment || equipment.technicianId !== state.tech.id || equipment.status !== 'repair') {
+        return { name: 'notfound', title: 'Reparación no encontrada', nav: 'equipos' };
+      }
+      return {
+        name: 'reparacion', id: equipment.id,
+        title: `Reparación · ${equipment.order}`, nav: 'equipos'
+      };
+    }
+
     if (name === 'diagnosticos' && parts[1]) {
       const diagnostic = getDiagnostic(parts[1]);
       if (!diagnostic || !isOwnDiagnostic(diagnostic)) {
@@ -1397,6 +1546,7 @@
     if (route.name === 'notfound') html = renderNotFound(route.title);
     else if (route.name === 'inicio') html = renderInicio();
     else if (route.name === 'equipos') html = renderEquipos();
+    else if (route.name === 'reparacion') html = renderReparacion(route.id);
     else if (route.name === 'expediente') html = renderExpediente(route.id, route.tab);
     else if (route.name === 'diagnosticos') html = renderDiagnosticos();
     else if (route.name === 'diagnostico') html = renderDiagnosticoDetail(route.id);
@@ -1438,11 +1588,13 @@
   /* Utilidades de búsqueda global y nombres cortos. */
   const firstName = (fullName) => String(fullName || 'Técnico').trim().split(/\s+/)[0];
   const equipmentName = (equipment) => equipment ? `${equipment.manufacturer} ${equipment.model}` : 'Equipo';
+  const equipmentSeller = (equipment) => equipment?.seller || 'Sin vendedor';
   const equipmentSearchText = (equipment) => {
     const client = equipmentClient(equipment);
     return normalize([
       equipment.id, equipment.order, equipment.manufacturer, equipment.model,
-      equipment.serial, statusMeta(equipment.status).label, client?.company, client?.contact
+      equipment.serial, equipmentSeller(equipment), statusMeta(equipment.status).label,
+      client?.company, client?.contact
     ].filter(Boolean).join(' '));
   };
 
@@ -1628,7 +1780,9 @@
     } else if (equipment.status === 'assigned' && actions.canStart) {
       buttons.push(`<button class="btn btn-sm btn-primary" type="button" data-action="start-diagnostic" data-id="${escapeAttr(equipment.id)}">${icon('play')}Iniciar diagnóstico</button>`);
     }
-    if (actions.finalized) {
+    if (equipment.status === 'repair') {
+      buttons.push(`<a class="btn btn-sm btn-primary" href="#/reparacion/${equipment.id}">${icon('settings')}Iniciar reparación</a>`);
+    } else if (actions.finalized) {
       buttons.push(`<a class="btn btn-sm btn-secondary" href="#/diagnosticos/${actions.finalized.id}">${icon('eye')}Ver diagnóstico</a>`);
     }
     buttons.push(`<a class="btn btn-sm btn-ghost" href="#/expediente/${equipment.id}">${icon('file-text')}Expediente</a>`);
@@ -1640,10 +1794,14 @@
     const client = equipmentClient(equipment);
     const meta = statusMeta(equipment.status);
     const actions = actionsForEquipment(equipment);
-    const noteIcon = equipment.status === 'finished' ? 'check-circle' : 'clock';
+    const noteIcon = equipment.status === 'finished' ? 'check-circle' : equipment.status === 'repair' ? 'settings' : 'clock';
     const note = equipment.status === 'finished' && actions.finalized?.finalizedAt
       ? `Cierre registrado el ${formatDate(actions.finalized.finalizedAt)}`
-      : `Asignado el ${formatDate(equipment.assignmentDate || equipment.receptionDate)}`;
+      : equipment.status === 'diagnosed'
+        ? 'Pendiente de autorización del vendedor'
+        : equipment.status === 'repair'
+          ? 'Pendiente de reparación'
+          : `Asignado el ${formatDate(equipment.assignmentDate || equipment.receptionDate)}`;
     return `<article class="dashboard-equipment tone-${meta.tone}">
       <div class="dashboard-equipment-head">
         <span class="dashboard-equipment-icon">${icon(meta.icon)}</span>
@@ -1817,6 +1975,8 @@
     const draftClient = draftEquipment ? equipmentClient(draftEquipment) : null;
     const pendingEquipment = equipment.find((item) => item.status === 'assigned' && !draftForEquipment(item.id));
     const pendingClient = equipmentClient(pendingEquipment);
+    const repairEquipment = equipment.find((item) => item.status === 'repair');
+    const repairClient = equipmentClient(repairEquipment);
     const activeEquipment = Math.max(equipment.length - counts.finished, 0);
     const completionPercent = equipment.length ? Math.round((counts.finished / equipment.length) * 100) : 0;
     const monthStart = Date.now() - (28 * 24 * 60 * 60 * 1000);
@@ -1855,11 +2015,13 @@
       ? `${activityWeeks[3]} esta semana · ${activityWeeks[2]} la anterior`
       : 'Sin eventos en las últimas semanas';
 
-    let heroAction = `<a class="dashboard-cta" href="#/equipos">${icon('cpu')}<span class="dashboard-cta-copy"><strong>Revisar mis equipos</strong><small>Consulta tu carga de trabajo</small></span>${icon('arrow-right')}</a>`;
+    let heroAction = `<a class="dashboard-cta" href="#/equipos">${icon('cpu')}<span class="dashboard-cta-copy"><strong>Revisar equipos</strong><small>Consulta tu carga de trabajo</small></span>${icon('arrow-right')}</a>`;
     if (activeDraft) {
       heroAction = `<a class="dashboard-cta" href="#/diagnosticos/${activeDraft.id}">${icon('edit')}<span class="dashboard-cta-copy"><strong>Continuar diagnóstico</strong><small>${escapeHtml(activeDraft.order)} · ${draftProgress.percent}% capturado</small></span>${icon('arrow-right')}</a>`;
     } else if (pendingEquipment) {
       heroAction = `<button class="dashboard-cta" type="button" data-action="start-diagnostic" data-id="${escapeAttr(pendingEquipment.id)}">${icon('play')}<span class="dashboard-cta-copy"><strong>Iniciar diagnóstico</strong><small>${escapeHtml(pendingEquipment.order)} · ${escapeHtml(equipmentName(pendingEquipment))}</small></span>${icon('arrow-right')}</button>`;
+    } else if (repairEquipment) {
+      heroAction = `<a class="dashboard-cta" href="#/reparacion/${repairEquipment.id}">${icon('settings')}<span class="dashboard-cta-copy"><strong>Iniciar reparación</strong><small>${escapeHtml(repairEquipment.order)} · ${escapeHtml(equipmentName(repairEquipment))}</small></span>${icon('arrow-right')}</a>`;
     }
 
     let focusContent = '';
@@ -1909,16 +2071,37 @@
         </div>
         <button class="btn btn-primary btn-block" type="button" data-action="start-diagnostic" data-id="${escapeAttr(pendingEquipment.id)}">${icon('play')}Iniciar diagnóstico</button>
         <p class="dashboard-focus-note">${icon('info')}Se creará un borrador y el equipo pasará a En diagnóstico.</p>`;
+    } else if (repairEquipment) {
+      focusContent = `<div class="dashboard-focus-banner">
+          <span class="dashboard-focus-icon">${icon('settings')}</span>
+          <div class="dashboard-focus-copy">
+            <span>Equipo por reparar</span>
+            <strong>${escapeHtml(repairEquipment.order)}</strong>
+            <p>${escapeHtml(equipmentName(repairEquipment))}</p>
+          </div>
+          ${statusBadge(repairEquipment.status)}
+        </div>
+        <div class="dashboard-focus-facts">
+          <div><span>Cliente</span><strong>${escapeHtml(repairClient?.company || 'Cliente')}</strong></div>
+          <div><span>Vendedor</span><strong>${escapeHtml(equipmentSeller(repairEquipment))}</strong></div>
+          <div><span>Ingreso</span><strong>${escapeHtml(formatDate(repairEquipment.receptionDate))}</strong></div>
+        </div>
+        <div class="dashboard-focus-checklist">
+          <span>${icon('check-circle')}Autorización del vendedor registrada</span>
+          <span>${icon('check-circle')}Materiales completos</span>
+        </div>
+        <a class="btn btn-primary btn-block" href="#/reparacion/${repairEquipment.id}">${icon('settings')}Iniciar reparación</a>
+        <p class="dashboard-focus-note">${icon('lock')}Equipo autorizado y con materiales listos. Diagnóstico de solo lectura.</p>`;
     } else {
       focusContent = `<div class="dashboard-focus-banner is-done">
           <span class="dashboard-focus-icon">${icon('check-circle')}</span>
           <div class="dashboard-focus-copy">
             <span>Todo al día</span>
             <strong>Sin trabajo pendiente</strong>
-            <p>No hay borradores activos ni equipos por iniciar.</p>
+            <p>No hay borradores activos ni equipos por iniciar o reparar.</p>
           </div>
         </div>
-        <a class="btn btn-secondary btn-block" href="#/equipos">${icon('cpu')}Revisar mis equipos</a>`;
+        <a class="btn btn-secondary btn-block" href="#/equipos">${icon('cpu')}Revisar equipos</a>`;
     }
 
     return `<div class="view dashboard-view">
@@ -2000,10 +2183,10 @@
           <div class="card-head">
             <div>
               <span class="dashboard-eyebrow">Carga de trabajo</span>
-              <h2 id="dashboard-equipment-title">Mis equipos</h2>
+              <h2 id="dashboard-equipment-title">Equipos</h2>
               <p>${equipment.length} ${equipment.length === 1 ? 'equipo' : 'equipos'} bajo tu responsabilidad.</p>
             </div>
-            <a class="btn btn-sm btn-secondary" href="#/equipos">Ver todos ${icon('arrow-right')}</a>
+            <a class="btn btn-sm btn-secondary" href="#/equipos">Ver pendientes ${icon('arrow-right')}</a>
           </div>
           <div class="card-body">
             ${equipment.length ? `<div class="dashboard-equipment-list">${equipment.map(equipmentWorkItem).join('')}</div>` : emptyState({ icon: 'cpu', title: 'Sin equipos asignados', text: 'Cuando recibas una orden, aparecerá en este panel.' })}
@@ -2015,7 +2198,7 @@
             <div>
               <span class="dashboard-eyebrow">Siguiente paso</span>
               <h2 id="dashboard-focus-title">Continuar trabajo</h2>
-              <p>Retoma el diagnóstico o inicia el equipo pendiente.</p>
+              <p>Retoma el diagnóstico, inicia el equipo pendiente o revisa la reparación.</p>
             </div>
           </div>
           <div class="card-body">${focusContent}</div>
@@ -2059,60 +2242,71 @@
   }
 
   /* ------------------------------------------------------------
-     12. Mis equipos
-     Listado de equipos del técnico con búsqueda, filtro por estado y acciones para iniciar, continuar o consultar el diagnóstico.
+     12. Equipos
+     Cola del técnico con búsqueda, filtro por estado y acciones para iniciar, continuar o consultar el diagnóstico.
      ------------------------------------------------------------ */
+  /* Devuelve el texto del contador con el plural correcto. */
+  function equipmentCountLabel(visible, total) {
+    return `Mostrando ${visible} de ${total} ${total === 1 ? 'equipo' : 'equipos'}`;
+  }
+
+  /* Genera una fila vacía para la tabla de equipos. */
+  function equipmentEmptyRow(message) {
+    return `<tr><td colspan="6"><div class="table-empty">${icon('search')}<p>${escapeHtml(message)}</p></div></td></tr>`;
+  }
+
   /* Genera una fila de la tabla de equipos con sus datos y acciones. */
   function equipmentTableRow(equipment) {
     const client = equipmentClient(equipment);
     return `<tr data-equipment-row data-search="${escapeAttr(equipmentSearchText(equipment))}">
       <td><div class="cell-main"><strong>${escapeHtml(equipment.order)}</strong><span>${escapeHtml(equipmentName(equipment))}</span><span class="mono">${escapeHtml(equipment.serial)}</span></div></td>
       <td><div class="cell-main"><strong>${escapeHtml(client?.company || 'Cliente')}</strong><span>${escapeHtml(client?.contact || 'Sin contacto')}</span></div></td>
+      <td>${escapeHtml(equipmentSeller(equipment))}</td>
       <td><div class="row">${statusBadge(equipment.status)}${priorityBadge(equipment.priority)}</div></td>
       <td class="nowrap">${escapeHtml(formatDate(equipment.receptionDate))}</td>
       <td><div class="cell-actions">${equipmentActions(equipment)}</div></td>
     </tr>`;
   }
 
-  /* Renderiza la vista Mis equipos con buscador, filtro por estado y tabla. */
+  /* Renderiza la cola de Equipos con buscador, filtro por estado y tabla. */
   function renderEquipos() {
-    const equipment = ownEquipment();
+    const equipment = queueEquipment();
+    const statusOptions = WORK_QUEUE_STATUSES
+      .map((key) => `<option value="${escapeAttr(key)}">${escapeHtml(statusMeta(key).label)}</option>`)
+      .join('');
     return `<div class="view">
       ${pageHeader({
         kicker: 'Carga de trabajo',
-        title: 'Mis equipos',
-        lead: 'Consulta los dos equipos asignados en la demostración, abre su expediente y da seguimiento al diagnóstico técnico.',
+        title: 'Equipos',
+        lead: 'Consulta los equipos asignados, en diagnóstico o pendientes de reparación, abre su expediente y da seguimiento al trabajo técnico.',
         actions: '<a class="btn btn-secondary" href="#/diagnosticos">' + icon('clipboard') + 'Ir a diagnósticos</a>'
       })}
       <section class="card table-card">
         <div class="table-toolbar">
           <div class="search-field" data-search-field>
             ${icon('search')}
-            <label class="sr-only" for="equipment-search">Buscar equipos por orden, cliente, fabricante o serie</label>
-            <input id="equipment-search" type="search" placeholder="Buscar orden, cliente, fabricante o serie..." autocomplete="off">
+            <label class="sr-only" for="equipment-search">Buscar equipos por orden, cliente, vendedor, fabricante o serie</label>
+            <input id="equipment-search" type="search" placeholder="Buscar orden, cliente, vendedor, fabricante o serie..." autocomplete="off">
             <button class="search-clear" type="button" data-action="clear-equipment-search" aria-label="Limpiar búsqueda">${icon('x')}</button>
           </div>
           <div class="select-field">
             <label for="equipment-status-filter">Estado</label>
             <select id="equipment-status-filter">
               <option value="all">Todos</option>
-              <option value="assigned">Asignado</option>
-              <option value="diagnosing">En diagnóstico</option>
-              <option value="diagnosed">Diagnosticado</option>
-              <option value="finished">Finalizado</option>
+              ${statusOptions}
             </select>
           </div>
         </div>
         <div class="table-scroll">
-          <table class="data-table">
-            <caption class="sr-only">Equipos asignados al técnico</caption>
-            <thead><tr><th scope="col">Orden / Equipo</th><th scope="col">Cliente</th><th scope="col">Estado</th><th scope="col">Recepción</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
-            <tbody id="equipment-table-body">${equipment.map(equipmentTableRow).join('')}</tbody>
+          <table class="data-table equipment-table">
+            <caption class="sr-only">Equipos pendientes asignados al técnico</caption>
+            <thead><tr><th scope="col">Orden / Equipo</th><th scope="col">Cliente</th><th scope="col">Vendedor</th><th scope="col">Estado</th><th scope="col">Ingreso</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+            <tbody id="equipment-table-body">${equipment.length ? equipment.map(equipmentTableRow).join('') : equipmentEmptyRow('No hay equipos pendientes de diagnóstico o reparación.')}</tbody>
           </table>
         </div>
-        <div class="table-foot"><span class="table-count" id="equipment-table-count">Mostrando ${equipment.length} de ${equipment.length} equipos</span><span>Datos ficticios de demostración</span></div>
+        <div class="table-foot"><span class="table-count" id="equipment-table-count">${equipmentCountLabel(equipment.length, equipment.length)}</span><span>Datos ficticios de demostración</span></div>
       </section>
-      <div class="info-box">${icon('info')}<div>El prototipo incluye <strong>solo dos equipos</strong> de demostración con datos ficticios.</div></div>
+      <div class="info-box">${icon('info')}<div>Solo se muestran equipos <strong>asignados, en diagnóstico o por reparar</strong>. Los diagnosticados esperan autorización del vendedor; los finalizados se consultan en Diagnósticos e Historial.</div></div>
     </div>`;
   }
 
@@ -2124,17 +2318,18 @@
     const status = document.getElementById('equipment-status-filter')?.value || 'all';
     const searchField = document.querySelector('[data-search-field]');
     if (searchField) searchField.classList.toggle('has-value', Boolean(query));
-    const total = ownEquipment().length;
-    const rows = ownEquipment().filter((equipment) => {
+    const queue = queueEquipment();
+    const total = queue.length;
+    const rows = queue.filter((equipment) => {
       const matchesQuery = !query || equipmentSearchText(equipment).includes(query);
       const matchesStatus = status === 'all' || equipment.status === status;
       return matchesQuery && matchesStatus;
     });
     tbody.innerHTML = rows.length
       ? rows.map(equipmentTableRow).join('')
-      : `<tr><td colspan="5"><div class="table-empty">${icon('search')}<p>No hay equipos que coincidan con el filtro.</p></div></td></tr>`;
+      : equipmentEmptyRow('No hay equipos que coincidan con el filtro.');
     const count = document.getElementById('equipment-table-count');
-    if (count) count.textContent = `Mostrando ${rows.length} de ${total} equipos`;
+    if (count) count.textContent = equipmentCountLabel(rows.length, total);
   }
 
   /* ------------------------------------------------------------
@@ -2230,6 +2425,8 @@
       primaryAction = `<a class="btn btn-primary" href="#/diagnosticos/${actions.draft.id}">${icon('edit')}Continuar diagnóstico</a>`;
     } else if (equipment.status === 'assigned' && actions.canStart) {
       primaryAction = `<button class="btn btn-primary" type="button" data-action="start-diagnostic" data-id="${escapeAttr(equipment.id)}">${icon('play')}Iniciar diagnóstico</button>`;
+    } else if (equipment.status === 'repair') {
+      primaryAction = `<a class="btn btn-primary" href="#/reparacion/${equipment.id}">${icon('settings')}Iniciar reparación</a>`;
     } else if (actions.finalized) {
       primaryAction = `<a class="btn btn-primary" href="#/diagnosticos/${actions.finalized.id}">${icon('eye')}Ver diagnóstico finalizado</a>`;
     }
@@ -2263,6 +2460,7 @@
             <dl class="info-list">
               <div class="info-row"><dt>Recepción</dt><dd>${escapeHtml(formatDateTime(equipment.receptionDate))}</dd></div>
               <div class="info-row"><dt>Recibió</dt><dd>${escapeHtml(equipment.receivedBy)}</dd></div>
+              <div class="info-row"><dt>Vendedor</dt><dd>${escapeHtml(equipmentSeller(equipment))}</dd></div>
               <div class="info-row"><dt>Asignación</dt><dd>${escapeHtml(formatDateTime(equipment.assignmentDate))}</dd></div>
               <div class="info-row"><dt>Técnico</dt><dd>${escapeHtml(tech().name)}</dd></div>
               <div class="info-row"><dt>Estado</dt><dd>${statusBadge(equipment.status)}</dd></div>
@@ -2337,7 +2535,9 @@
           title: equipment.status === 'assigned' ? 'Diagnóstico pendiente de inicio' : 'Sin diagnóstico registrado',
           text: equipment.status === 'assigned'
             ? 'Inicia el diagnóstico para capturar la evaluación, retroalimentación, pinout, sincronía y conclusiones.'
-            : 'Este equipo no tiene un diagnóstico disponible en la demostración.',
+            : equipment.status === 'repair'
+              ? 'El equipo está autorizado y listo para reparación, pero no tiene un diagnóstico asociado en esta demostración.'
+              : 'Este equipo no tiene un diagnóstico disponible en la demostración.',
           action: equipment.status === 'assigned' && actions.canStart
             ? `<button class="btn btn-primary" type="button" data-action="start-diagnostic" data-id="${escapeAttr(equipment.id)}">${icon('play')}Iniciar diagnóstico</button>`
             : ''
@@ -2358,7 +2558,7 @@
     return `<div class="view">
       <div class="record-head">
         <div class="page-head-copy">
-          <a class="back-link" href="#/equipos">${icon('arrow-left')}Mis equipos</a>
+          <a class="back-link" href="#/equipos">${icon('arrow-left')}Equipos</a>
           <span class="kicker">Expediente digital</span>
           <div class="record-title">
             <h1>${escapeHtml(equipment.order)}</h1>
@@ -3501,6 +3701,65 @@
     </div>`;
   }
 
+  /* Renderiza la vista de reparación con el diagnóstico de referencia bloqueado. Reutiliza las
+     secciones de solo lectura para que el técnico no pueda modificar el registro.
+     */
+  function renderReparacion(equipmentId) {
+    const equipment = getEquipment(equipmentId);
+    if (!equipment) return renderNotFound('Reparación no encontrada');
+    const client = equipmentClient(equipment);
+    const diagnostic = latestFinalizedDiagnostic(equipment.id);
+    if (!diagnostic) {
+      return `<div class="view">
+        ${pageHeader({
+          back: { href: '#/equipos', label: 'Equipos' },
+          kicker: 'Reparación',
+          title: `Reparación · ${equipment.order}`,
+          lead: 'Consulta el diagnóstico de referencia antes de intervenir el equipo.',
+          actions: `<a class="btn btn-secondary" href="#/expediente/${equipment.id}">${icon('file-text')}Expediente</a>`
+        })}
+        <div class="card">${emptyState({
+          icon: 'clipboard',
+          title: 'Sin diagnóstico de referencia',
+          text: 'Este equipo no tiene un diagnóstico finalizado que sirva como guía para la reparación.',
+          action: '<a class="btn btn-primary" href="#/equipos">Volver a equipos</a>'
+        })}</div>
+      </div>`;
+    }
+
+    const progress = diagnosticProgress(diagnostic);
+    return `<div class="view">
+      <div class="record-head">
+        <div class="page-head-copy">
+          <a class="back-link" href="#/equipos">${icon('arrow-left')}Equipos</a>
+          <span class="kicker">Reparación · Diagnóstico de referencia</span>
+          <div class="record-title">
+            <h1>Reparación ${escapeHtml(equipment.order)}</h1>
+            <p class="lead">${escapeHtml(equipmentName(equipment))} · ${escapeHtml(client?.company || 'Cliente')}</p>
+            <div class="record-meta">${statusBadge(equipment.status)}<span class="readonly-pill">${icon('lock')}Diagnóstico bloqueado</span><span class="chip mono">${escapeHtml(diagnostic.id)}</span></div>
+          </div>
+        </div>
+        <div class="record-quick-actions">
+          <a class="btn btn-secondary" href="#/expediente/${equipment.id}">${icon('file-text')}Expediente</a>
+          <a class="btn btn-ghost" href="#/equipos">${icon('cpu')}Volver a equipos</a>
+        </div>
+      </div>
+
+      <div class="success-box">${icon('lock')}<div><strong>Diagnóstico ficticio de solo lectura.</strong><br>Este registro guía la reparación y no puede editarse. El técnico solo puede consultar los valores capturados.</div></div>
+
+      <div class="diag-summary-grid">
+        <div class="diag-summary"><span>Resultado</span><strong>${htmlValue(diagnostic.conclusion?.finalResult)}</strong></div>
+        <div class="diag-summary"><span>Polos registrados</span><strong>${escapeHtml(diagnostic.poles ?? '—')}</strong></div>
+        <div class="diag-summary"><span>Sincronía almacenada</span><strong>${diagnostic.syncStored === 'yes' ? 'Sí' : diagnostic.syncStored === 'no' ? 'No' : '—'}</strong></div>
+        <div class="diag-summary"><span>Avance del registro</span><strong>${progress.percent}%</strong></div>
+      </div>
+
+      ${renderReadonlySections(diagnostic, { interactive: true })}
+
+      <div class="info-box">${icon('info')}<div>El equipo permanece en <strong>Por reparar</strong>. Esta demostración no incluye el registro de cierre de la reparación.</div></div>
+    </div>`;
+  }
+
   /* Decide si mostrar el formulario editable o la vista de solo lectura según el estado del
      diagnóstico.
      */
@@ -3537,7 +3796,7 @@
         kicker: 'Trazabilidad',
         title: 'Historial',
         lead: 'Eventos registrados para los equipos asignados. Cada cambio de estado conserva fecha, responsable y observaciones.',
-        actions: `<a class="btn btn-secondary" href="#/equipos">${icon('cpu')}Mis equipos</a>`
+        actions: `<a class="btn btn-secondary" href="#/equipos">${icon('cpu')}Equipos</a>`
       })}
       <section class="card">
         <div class="table-toolbar">
@@ -3626,7 +3885,7 @@
         kicker: 'Archivo técnico',
         title: 'Documentos',
         lead: 'Metadatos de demostración con vista previa y descarga de archivos de texto generados en el navegador mediante Blob.',
-        actions: `<a class="btn btn-secondary" href="#/equipos">${icon('cpu')}Mis equipos</a>`
+        actions: `<a class="btn btn-secondary" href="#/equipos">${icon('cpu')}Equipos</a>`
       })}
       <section class="card table-card">
         <div class="table-toolbar">

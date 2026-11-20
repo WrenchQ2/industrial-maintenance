@@ -540,6 +540,7 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
 .badge-green { background: var(--success-bg); color: var(--success); border-color: var(--success-line); }
 .badge-amber { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-line); }
 .badge-red { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
+.badge-violet { background: #f3e8ff; color: #6d28d9; border-color: #e9d5ff; }
 .badge-gray { background: #eef2f7; color: var(--muted); border-color: #dfe7f1; }
 .chip {
   display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
@@ -563,6 +564,7 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
   --chart-amber: #f59e0b;
   --chart-cyan: #06b6d4;
   --chart-green: #22c55e;
+  --chart-violet: #8b5cf6;
   --chart-track: rgba(148, 163, 184, .18);
   --chart-week-1: #a5f3fc;
   --chart-week-2: #67e8f9;
@@ -688,6 +690,7 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
 .dashboard-tone-blue { background: var(--chart-blue); }
 .dashboard-tone-amber { background: var(--chart-amber); }
 .dashboard-tone-cyan { background: var(--chart-cyan); }
+.dashboard-tone-violet { background: var(--chart-violet); }
 .dashboard-tone-green { background: var(--chart-green); }
 
 /* Tres métricas principales con gráficas circulares enlazadas a sus listados. */
@@ -826,6 +829,7 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
 .dashboard-equipment.tone-blue::before { background: #60a5fa; }
 .dashboard-equipment.tone-amber::before { background: #fbbf24; }
 .dashboard-equipment.tone-cyan::before { background: #22d3ee; }
+.dashboard-equipment.tone-violet::before { background: #8b5cf6; }
 .dashboard-equipment.tone-green::before { background: #4ade80; }
 .dashboard-equipment:hover {
   border-color: #fff;
@@ -1065,6 +1069,8 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
 .data-table .cell-main span { color: var(--muted); font-size: .68rem; }
 .data-table .cell-actions { display: flex; gap: 6px; justify-content: flex-end; }
 .data-table .num { font-family: var(--mono); font-size: .72rem; color: var(--ink); }
+/* La cola de equipos necesita más ancho por la columna Vendedor. */
+.equipment-table { min-width: 920px; }
 .table-empty { padding: 38px 20px; text-align: center; color: var(--muted); }
 .table-empty .icon { width: 32px; height: 32px; margin: 0 auto 8px; color: var(--muted-2); }
 .table-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line-3); color: var(--muted); font-size: .69rem; background: var(--surface-2); }

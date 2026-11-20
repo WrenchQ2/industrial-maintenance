@@ -2,7 +2,7 @@
 
 ## Contexto
 
-- Prototipo frontend estático de 3 archivos: `index.html`, `styles.css` y `script.js`. No hay backend, build, package manager, tests ni repositorio git en esta carpeta.
+- Prototipo frontend estático de 3 archivos: `index.html`, `styles.css` y `script.js`. No hay backend, build, package manager ni tests (sí existe repo git en la carpeta).
 - Debe funcionar abriendo `index.html` directamente con doble clic (`file://`). No introduzcas `fetch`, módulos ES, frameworks, CDN ni dependencias externas.
 - Toda la interfaz, textos, `aria-label` y comentarios están en español. Mantén ese idioma.
 
@@ -23,7 +23,11 @@
 ## Estado y datos
 
 - Persistencia: `localStorage["servmotion.control.v1"]`. Para restaurar el seed, borra esa clave o el almacenamiento del navegador.
-- La demo es intencionalmente pequeña: 2 equipos (`EQ-001` asignado y `EQ-002` finalizado) y 1 diagnóstico seed (`DIA-0001`). Varios textos dicen "dos equipos"; no añadas datos sin revisarlos.
+- La demo es intencionalmente pequeña: 3 equipos (`EQ-001` asignado, `EQ-002` finalizado y `EQ-003` por reparar), 2 diagnósticos seed (`DIA-0001` de `EQ-002` y `DIA-0002` de `EQ-003`, ambos finalizados) y vendedores ficticios (Mariana Cortés y Diego Fuentes). No añadas datos sin revisar los textos y contadores.
+- La vista **Equipos** muestra solo la cola activa del técnico: Asignado, En diagnóstico y Por reparar (`WORK_QUEUE_STATUSES`). Diagnosticado y Finalizado quedan fuera de esa vista, pero siguen en Inicio, Diagnósticos e Historial.
+- **Por reparar** (`repair`) es un estado propio para equipos ya autorizados por el vendedor y con materiales completos. El flujo real de autorización, compras y asignación no está implementado en esta fase.
+- **Iniciar reparación** abre `#/reparacion/:equipmentId`, una vista con el diagnóstico `DIA-0002` de referencia en modo solo lectura (`renderReadonlySections`). El técnico no puede editar el registro; el equipo permanece en `repair` porque no existe cierre de reparación en esta fase.
+- `ensureDemoState()` completa datos guardados antiguos (vendedores, `EQ-003` y su diagnóstico si falta) sin borrar diagnósticos, historial, documentos ni notas. Si `DIA-0002` ya existe para otro equipo, usa el siguiente ID secuencial.
 - Diagnóstico: 19 campos obligatorios repartidos en las secciones A-D. La sincronía usa 6 filas y de 1 a 64 polos; exige valores positivos y conserva las columnas ocultas al reducir polos.
 - No hay autenticación real: "Cerrar sesión" es solo informativo. Los documentos y el pinout de ejemplo se generan en el navegador con `Blob`/data URLs.
 
