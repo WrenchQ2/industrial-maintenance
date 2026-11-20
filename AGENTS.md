@@ -5,6 +5,7 @@
 - Prototipo frontend estático de 3 archivos: `index.html`, `styles.css` y `script.js`. No hay backend, build, package manager ni tests (sí existe repo git en la carpeta).
 - Debe funcionar abriendo `index.html` directamente con doble clic (`file://`). No introduzcas `fetch`, módulos ES, frameworks, CDN ni dependencias externas.
 - Toda la interfaz, textos, `aria-label` y comentarios están en español. Mantén ese idioma.
+- La constitución del proyecto vive en `docs/constitution.md`; sus 6 principios son innegociables y se verifican en cada cambio.
 
 ## Estructura
 
@@ -28,7 +29,7 @@
 - **Por reparar** (`repair`) es un estado propio para equipos ya autorizados por el vendedor y con materiales completos. El flujo real de autorización, compras y asignación no está implementado en esta fase.
 - **Iniciar reparación** abre `#/reparacion/:equipmentId`, una vista con el diagnóstico `DIA-0002` de referencia en modo solo lectura (`renderReadonlySections`). El técnico no puede editar el registro; el equipo permanece en `repair` porque no existe cierre de reparación en esta fase.
 - `ensureDemoState()` completa datos guardados antiguos (vendedores, `EQ-003` y su diagnóstico si falta) sin borrar diagnósticos, historial, documentos ni notas. Si `DIA-0002` ya existe para otro equipo, usa el siguiente ID secuencial.
-- Diagnóstico: 19 campos obligatorios repartidos en las secciones A-D. La sincronía usa 6 filas y de 1 a 64 polos; exige valores positivos y conserva las columnas ocultas al reducir polos.
+- Diagnóstico: 19 campos obligatorios repartidos en las secciones A-D. El formulario editable las muestra como pestañas (solo un bloque visible) con navegación Anterior/Siguiente y chips de avance; al finalizar con errores se abre el bloque del primer campo inválido. La vista previa y el diagnóstico finalizado mantienen las secciones apiladas. La sincronía usa 6 filas y de 1 a 64 polos; exige valores positivos y conserva las columnas ocultas al reducir polos.
 - No hay autenticación real: "Cerrar sesión" es solo informativo. Los documentos y el pinout de ejemplo se generan en el navegador con `Blob`/data URLs.
 
 ## Cuidados al editar
