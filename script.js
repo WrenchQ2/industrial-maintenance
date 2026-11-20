@@ -69,6 +69,14 @@
   /* Filas fijas de la tabla de sincronía (pares de fases). */
   const SYNC_ROWS = Object.freeze(['U-V', 'U-W', 'V-W', 'V-U', 'W-V', 'W-U']);
 
+  /* Bloques del formulario editable y etiqueta corta usada en las pestañas. */
+  const DIAG_BLOCKS = Object.freeze([
+    { key: 'A', title: 'Evaluación' },
+    { key: 'B', title: 'Retroalimentación' },
+    { key: 'C', title: 'Pinout y sincronía' },
+    { key: 'D', title: 'Conclusiones' }
+  ]);
+
   /* Metadatos de las rutas principales: título de página y módulo activo del sidebar. */
   const ROUTE_META = Object.freeze({
     inicio: { title: 'Inicio', nav: 'inicio' },
@@ -794,6 +802,7 @@
   let bootNotices = [];
   let autosaveTimer = null;
   let activeDraftId = null;
+  let activeDiagTab = 'A';
 
   const ui = {
     modalOpen: false,
@@ -1536,6 +1545,7 @@
   function handleRoute() {
     flushPendingAutosave();
     activeDraftId = null;
+    activeDiagTab = 'A';
     const route = parseRoute();
     setActiveNav(route.nav);
     setPageTitle(route.title);
@@ -2804,9 +2814,9 @@
     });
   }
 
-  /* Genera los chips de avance por sección. */
+  /* Genera los chips de avance por sección; cada chip salta a su bloque. */
   function progressChipsHtml(progress) {
-    return progress.sections.map((section) => `<span class="progress-chip ${section.complete ? 'complete' : ''}"><span class="dot-state">${icon('check')}</span>${escapeHtml(section.label)}</span>`).join('');
+    return progress.sections.map((section) => `<button type="button" class="progress-chip ${section.complete ? 'complete' : ''} ${section.key === activeDiagTab ? 'is-active' : ''}" data-action="diag-tab" data-tab="${section.key}" aria-controls="seccion-${section.key.toLowerCase()}" ${section.key === activeDiagTab ? 'aria-current="step"' : ''} aria-label="Ir al bloque ${escapeAttr(section.label)}"><span class="dot-state">${icon('check')}</span>${escapeHtml(section.label)}</button>`).join('');
   }
 
   /* Devuelve la marca de sección completa o pendiente. */
@@ -2815,6 +2825,82 @@
     return section?.complete
       ? `<span class="section-state complete" data-section-state="${key}">${icon('check-circle')}Completa</span>`
       : `<span class="section-state" data-section-state="${key}">${icon('clock')}Pendiente</span>`;
+  }
+
+  /* Genera la barra de pestañas de los bloques A-D del formulario editable. */
+  function diagTabsHtml(progress) {
+    return `<div class="diag-tabs" role="tablist" aria-label="Bloques del diagnóstico">${DIAG_BLOCKS.map((block) => {
+      const section = progress.sections.find((item) => item.key === block.key);
+      const selected = block.key === activeDiagTab;
+      const complete = Boolean(section?.complete);
+      return `<button class="diag-tab ${complete ? 'complete' : ''}" id="diag-tab-${block.key.toLowerCase()}" type="button" role="tab" aria-selected="${selected}" aria-controls="seccion-${block.key.toLowerCase()}" tabindex="${selected ? '0' : '-1'}" data-action="diag-tab" data-tab="${block.key}">
+        <span class="diag-tab-index">${block.key}</span>
+        <span class="diag-tab-copy"><strong>${escapeHtml(block.title)}</strong><small data-tab-meta="${block.key}">${section ? `${section.completed} de ${section.total}` : ''}</small></span>
+        <span class="diag-tab-state" data-tab-state="${block.key}">${complete ? icon('check') : ''}</span>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  /* Genera los controles para avanzar o retroceder entre bloques. */
+  function diagBlockNavHtml() {
+    const index = Math.max(0, DIAG_BLOCKS.findIndex((block) => block.key === activeDiagTab));
+    const block = DIAG_BLOCKS[index];
+    return `<button class="btn btn-secondary btn-sm" type="button" data-action="diag-block-prev" ${index === 0 ? 'disabled' : ''}>${icon('arrow-left')}Anterior</button>
+      <span class="diag-block-position">Bloque <strong>${block.key}</strong> de ${DIAG_BLOCKS.length}<span>${escapeHtml(block.title)}</span></span>
+      <button class="btn btn-secondary btn-sm" type="button" data-action="diag-block-next" ${index === DIAG_BLOCKS.length - 1 ? 'disabled' : ''}>Siguiente${icon('arrow-right')}</button>`;
+  }
+
+  /* Actualiza el texto y los botones de la navegación entre bloques. */
+  function updateDiagBlockNav() {
+    const nav = document.getElementById('diag-block-nav');
+    if (nav) nav.innerHTML = diagBlockNavHtml();
+  }
+
+  /* Activa un bloque, muestra su panel y sincroniza pestañas, chips y navegación. */
+  function activateDiagnosticTab(key, options = {}) {
+    const block = DIAG_BLOCKS.find((item) => item.key === key);
+    if (!block) return;
+    activeDiagTab = block.key;
+    const form = document.getElementById('diagnostic-form');
+    if (!form) return;
+    $$('.diag-tab', form).forEach((tab) => {
+      const selected = tab.dataset.tab === block.key;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    $$('[data-diag-panel]', form).forEach((panel) => {
+      panel.hidden = panel.dataset.diagPanel !== block.key;
+    });
+    $$('.progress-chip').forEach((chip) => {
+      const active = chip.dataset.tab === block.key;
+      chip.classList.toggle('is-active', active);
+      if (active) chip.setAttribute('aria-current', 'step');
+      else chip.removeAttribute('aria-current');
+    });
+    updateDiagBlockNav();
+    if (options.scroll) {
+      form.querySelector('.diag-tabs')?.scrollIntoView({ behavior: state.preferences.reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    }
+    const activeTab = form.querySelector(`.diag-tab[data-tab="${block.key}"]`);
+    activeTab?.scrollIntoView({ behavior: state.preferences.reducedMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'nearest' });
+    if (options.focusTab) {
+      activeTab?.focus({ preventScroll: true });
+    }
+  }
+
+  /* Avanza o retrocede un bloque desde la navegación inferior. */
+  function moveDiagnosticTab(delta) {
+    const index = DIAG_BLOCKS.findIndex((item) => item.key === activeDiagTab);
+    const next = DIAG_BLOCKS[index + delta];
+    if (next) activateDiagnosticTab(next.key, { focusTab: true, scroll: true });
+  }
+
+  /* Asocia la ruta de un error de validación con su bloque A-D. */
+  function diagnosticSectionForPath(path) {
+    if (path.startsWith('encoder.')) return 'B';
+    if (path === 'poles' || path === 'syncStored' || path === 'sync' || path.startsWith('pinout.')) return 'C';
+    if (path.startsWith('conclusion.')) return 'D';
+    return 'A';
   }
 
   /* Generadores de ids estables para relacionar controles, ayudas y mensajes de error. */
@@ -2942,11 +3028,12 @@
       </div>
 
       <div id="diag-errors" aria-live="polite"></div>
-      <div class="info-box">${icon('info')}<div><strong>Todos los campos visibles son obligatorios.</strong> El borrador se guarda automáticamente en este navegador; los datos son ficticios.</div></div>
+      <div class="info-box">${icon('info')}<div><strong>Todos los campos de los bloques A-D son obligatorios.</strong> Cambia de bloque sin perder lo capturado; el borrador se guarda automáticamente en este navegador. Los datos son ficticios.</div></div>
 
       <form id="diagnostic-form" novalidate>
         <div class="stack gap-20">
-          <section class="card diag-section" id="seccion-a" aria-labelledby="seccion-a-title">
+          ${diagTabsHtml(progress)}
+          <section class="card diag-section diag-panel" id="seccion-a" role="tabpanel" aria-labelledby="diag-tab-a" data-diag-panel="A" tabindex="0" ${activeDiagTab === 'A' ? '' : 'hidden'}>
             <div class="diag-section-head">
               <span class="section-index">A</span>
               <div><h2 id="seccion-a-title">Evaluación inicial</h2><p>Condición del equipo y verificación de seguridad antes de la captura.</p></div>
@@ -2961,7 +3048,7 @@
             </div>
           </section>
 
-          <section class="card diag-section" id="seccion-b" aria-labelledby="seccion-b-title">
+          <section class="card diag-section diag-panel" id="seccion-b" role="tabpanel" aria-labelledby="diag-tab-b" data-diag-panel="B" tabindex="0" ${activeDiagTab === 'B' ? '' : 'hidden'}>
             <div class="diag-section-head">
               <span class="section-index">B</span>
               <div><h2 id="seccion-b-title">Retroalimentación</h2><p>Tipo de encoder e impedancias de las señales medidas.</p></div>
@@ -2978,7 +3065,7 @@
             </div>
           </section>
 
-          <section class="card diag-section" id="seccion-c" aria-labelledby="seccion-c-title">
+          <section class="card diag-section diag-panel" id="seccion-c" role="tabpanel" aria-labelledby="diag-tab-c" data-diag-panel="C" tabindex="0" ${activeDiagTab === 'C' ? '' : 'hidden'}>
             <div class="diag-section-head">
               <span class="section-index">C</span>
               <div><h2 id="seccion-c-title">Pinout y sincronía</h2><p>Referencia del conector, número de polos y valores por par de fases.</p></div>
@@ -3019,7 +3106,7 @@
             </div>
           </section>
 
-          <section class="card diag-section" id="seccion-d" aria-labelledby="seccion-d-title">
+          <section class="card diag-section diag-panel" id="seccion-d" role="tabpanel" aria-labelledby="diag-tab-d" data-diag-panel="D" tabindex="0" ${activeDiagTab === 'D' ? '' : 'hidden'}>
             <div class="diag-section-head">
               <span class="section-index">D</span>
               <div><h2 id="seccion-d-title">Conclusiones</h2><p>Cierre técnico del diagnóstico y recomendación.</p></div>
@@ -3034,6 +3121,8 @@
               </div>
             </div>
           </section>
+
+          <div class="diag-block-nav" id="diag-block-nav">${diagBlockNavHtml()}</div>
 
           <div class="diag-actionbar">
             <span class="autosave-state" id="autosave-state" data-state="saved"><span class="status-dot"></span><span data-autosave-label>Guardado ${escapeHtml(timeAgo(diagnostic.updatedAt))}</span></span>
@@ -3187,6 +3276,7 @@
         : '';
     }
     if (errors.length) {
+      activateDiagnosticTab(diagnosticSectionForPath(errors[0].path));
       const firstInvalid = form.querySelector('.is-invalid');
       setTimeout(() => {
         firstInvalid?.focus();
@@ -3224,10 +3314,17 @@
     if (copy) copy.textContent = `${progress.completed} de ${progress.total} campos obligatorios completos`;
     if (chips) chips.innerHTML = progressChipsHtml(progress);
     progress.sections.forEach((section) => {
-      const element = document.querySelector(`[data-section-state="${section.key}"]`);
-      if (!element) return;
-      element.className = `section-state ${section.complete ? 'complete' : ''}`;
-      element.innerHTML = section.complete ? `${icon('check-circle')}Completa` : `${icon('clock')}Pendiente`;
+      $$(`[data-section-state="${section.key}"]`).forEach((element) => {
+        element.className = `section-state ${section.complete ? 'complete' : ''}`;
+        element.innerHTML = section.complete ? `${icon('check-circle')}Completa` : `${icon('clock')}Pendiente`;
+      });
+      const tab = document.querySelector(`.diag-tab[data-tab="${section.key}"]`);
+      if (!tab) return;
+      tab.classList.toggle('complete', section.complete);
+      const meta = tab.querySelector('[data-tab-meta]');
+      if (meta) meta.textContent = `${section.completed} de ${section.total}`;
+      const tabState = tab.querySelector('[data-tab-state]');
+      if (tabState) tabState.innerHTML = section.complete ? icon('check') : '';
     });
   }
 
@@ -3444,6 +3541,22 @@
     if (!form) return;
     form.addEventListener('input', handleDiagnosticFormEvent);
     form.addEventListener('change', handleDiagnosticFormEvent);
+    form.addEventListener('keydown', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const tab = target.closest('.diag-tab');
+      if (!tab) return;
+      const index = DIAG_BLOCKS.findIndex((block) => block.key === tab.dataset.tab);
+      if (index < 0) return;
+      let nextIndex = null;
+      if (event.key === 'ArrowRight') nextIndex = (index + 1) % DIAG_BLOCKS.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + DIAG_BLOCKS.length) % DIAG_BLOCKS.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = DIAG_BLOCKS.length - 1;
+      if (nextIndex === null) return;
+      event.preventDefault();
+      activateDiagnosticTab(DIAG_BLOCKS[nextIndex].key, { focusTab: true });
+    });
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       saveDiagnosticDraft(false);
@@ -4305,6 +4418,12 @@
     } else if (action === 'apply-poles') {
       event.preventDefault();
       applyPolesChange();
+    } else if (action === 'diag-tab') {
+      event.preventDefault();
+      activateDiagnosticTab(button.dataset.tab);
+    } else if (action === 'diag-block-prev' || action === 'diag-block-next') {
+      event.preventDefault();
+      moveDiagnosticTab(action === 'diag-block-next' ? 1 : -1);
     } else if (action === 'diag-preview') {
       event.preventDefault();
       previewCurrentDiagnostic();

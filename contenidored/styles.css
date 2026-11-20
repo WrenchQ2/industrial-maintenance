@@ -1142,12 +1142,58 @@ body.sidebar-collapsed .nav-item:hover::after { opacity: 1; transform: translate
 .progress-chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px;
   border: 1px solid var(--line); border-radius: 7px; color: var(--muted);
-  font-size: .66rem; font-weight: 650; background: var(--surface-2);
+  font: inherit; font-size: .66rem; font-weight: 650; background: var(--surface-2);
+  cursor: pointer; transition: border-color .16s, background .16s, color .16s, box-shadow .16s;
 }
+.progress-chip:hover { border-color: var(--line-2); background: #fff; color: var(--ink-2); }
 .progress-chip .dot-state { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2); background: #fff; color: transparent; }
 .progress-chip .dot-state .icon { width: 10px; height: 10px; }
 .progress-chip.complete { color: var(--success); border-color: var(--success-line); background: var(--success-bg); }
 .progress-chip.complete .dot-state { background: var(--success); border-color: var(--success); color: #fff; }
+.progress-chip.is-active { color: var(--primary); border-color: rgba(21, 94, 239, .45); background: var(--primary-50); box-shadow: 0 0 0 3px rgba(21, 94, 239, .07); }
+/* Pestañas de los bloques A-D del formulario editable. */
+
+.diag-tabs {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px;
+  padding: 7px; border: 1px solid var(--line); border-radius: 13px;
+  background: rgba(255, 255, 255, .72); box-shadow: var(--shadow-sm);
+  scroll-margin-top: 96px;
+}
+.diag-tab {
+  display: flex; align-items: center; gap: 9px; min-width: 0; padding: 10px 11px;
+  border: 1px solid transparent; border-radius: 9px; background: transparent;
+  color: var(--muted); text-align: left; font: inherit; cursor: pointer;
+  transition: border-color .16s, background .16s, color .16s, box-shadow .16s;
+}
+.diag-tab:hover { background: var(--surface-2); color: var(--ink-2); }
+.diag-tab:focus-visible { outline: 3px solid rgba(37, 99, 235, .35); outline-offset: 2px; }
+.diag-tab[aria-selected="true"] { background: var(--primary-50); border-color: #cbd9ff; color: var(--primary); box-shadow: 0 0 0 3px rgba(21, 94, 239, .06); }
+.diag-tab-index {
+  width: 27px; height: 27px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 8px; background: var(--surface-3); color: var(--muted);
+  font-size: .68rem; font-weight: 750;
+}
+.diag-tab[aria-selected="true"] .diag-tab-index { background: var(--primary); color: #fff; }
+.diag-tab-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.diag-tab-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; font-weight: 700; }
+.diag-tab-copy small { color: var(--muted-2); font-size: .61rem; font-variant-numeric: tabular-nums; }
+.diag-tab[aria-selected="true"] .diag-tab-copy small { color: var(--primary); }
+.diag-tab-state {
+  width: 17px; height: 17px; margin-left: auto; flex: 0 0 auto;
+  display: grid; place-items: center; border-radius: 50%;
+  color: var(--success);
+}
+.diag-tab-state .icon { width: 10px; height: 10px; }
+.diag-tab-state:empty { visibility: hidden; }
+.diag-tab.complete .diag-tab-state { background: var(--success); color: #fff; }
+.diag-panel:focus-visible { outline: 3px solid rgba(37, 99, 235, .28); outline-offset: 3px; }
+/* Navegación anterior/siguiente entre bloques. */
+
+.diag-block-nav { display: flex; align-items: center; gap: 12px; padding: 2px 2px 0; }
+.diag-block-position { flex: 1; text-align: center; color: var(--muted); font-size: .67rem; }
+.diag-block-position strong { color: var(--primary); }
+.diag-block-position span { display: block; margin-top: 1px; color: var(--muted-2); font-size: .62rem; }
+.diag-block-nav .btn[disabled] { opacity: .4; cursor: not-allowed; }
 /* Secciones A-D del formulario de captura técnica. */
 
 .diag-section { overflow: hidden; }
@@ -1504,6 +1550,10 @@ html[data-density="compact"] .info-card { padding: 16px; gap: 10px; }
   .record-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-grid { grid-template-columns: 1fr; }
   .diag-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diag-tab { padding: 9px 8px; gap: 6px; }
+  .diag-tab-index { width: 24px; height: 24px; }
+  .diag-tab-state { width: 15px; height: 15px; }
+  .diag-tab-copy strong { font-size: .67rem; }
 }
 /* Tablet horizontal: buscador más corto y una sola columna en el dashboard. */
 
@@ -1550,6 +1600,8 @@ html[data-density="compact"] .info-card { padding: 16px; gap: 10px; }
   .form-grid .span-2 { grid-column: auto; }
   .radio-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diag-tabs { display: flex; overflow-x: auto; scroll-snap-type: x proximity; padding: 6px; }
+  .diag-tab { flex: 0 0 180px; scroll-snap-align: start; }
 }
 /* Móvil ancho: la barra superior ocupa dos filas y el buscador va debajo. */
 
@@ -1565,10 +1617,13 @@ html[data-density="compact"] .info-card { padding: 16px; gap: 10px; }
   .diag-summary-grid { grid-template-columns: 1fr 1fr; }
   .readonly-grid { grid-template-columns: 1fr; }
   .doc-preview-meta { grid-template-columns: 1fr; }
-  .diag-actionbar { bottom: 8px; padding: 10px 11px; }
+  .diag-actionbar { position: static; padding: 10px 11px; }
   .diag-actionbar .btn-row { width: 100%; margin-left: 0; }
   .diag-actionbar .btn { flex: 1 1 auto; }
   .diag-actionbar .autosave-state { width: 100%; }
+  .diag-block-nav { flex-wrap: wrap; }
+  .diag-block-position { order: -1; flex-basis: 100%; }
+  .diag-block-nav .btn { flex: 1 1 auto; }
   .modal-root { padding: 10px; }
   .modal { max-height: calc(100vh - 20px); border-radius: 14px; }
   .modal-head, .modal-body { padding-left: 16px; padding-right: 16px; }
@@ -1608,6 +1663,7 @@ html[data-density="compact"] .info-card { padding: 16px; gap: 10px; }
   .poles-row .field { width: 100%; }
   .diag-section-head { padding: 15px 16px; }
   .diag-section-body { padding: 16px; }
+  .diag-tab { flex-basis: 164px; }
   .card-head { padding: 15px 16px; }
   .card-body { padding: 16px; }
   .card-pad { padding: 16px; }
