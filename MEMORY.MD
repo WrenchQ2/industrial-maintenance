@@ -11,7 +11,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Inicio muestra el panel “Equipos”, el botón “Ver pendientes”, la nota “Pendiente de reparación” y el bloque “Equipo por reparar” en Siguiente paso.
 - `EQ-003` muestra **Iniciar reparación** (tabla, dashboard, hero y expediente) y abre `#/reparacion/EQ-003` con el diagnóstico en solo lectura; no hay campos editables.
 - `contenidored/` sincronizado con hashes idénticos; `AGENTS.md` y esta memoria actualizados.
-- Rama `servmotion-tecnico`; cambios de esta iteración pendientes de commit.
+- Rama `servmotion-tecnico`; cola de Equipos y reparación publicadas en el commit `18bb3cb`.
 ## Decisiones (y por qué)
 - `repair` es un estado propio porque el flujo real es: vendedor autoriza → compras registra materiales → asignación al técnico → el técnico repara.
 - `WORK_QUEUE_STATUSES = ['assigned', 'diagnosing', 'repair']`: la cola no mezcla equipos ya diagnosticados ni cerrados.
